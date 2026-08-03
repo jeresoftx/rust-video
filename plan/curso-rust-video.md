@@ -54,7 +54,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 03. Pipeline de procesamiento en tiempo real
 
 - [ ] Modelar etapas, contratos y backpressure.
-- [ ] Comparar pipeline secuencial, por lotes y por etapas concurrentes.
+- [x] Comparar pipeline secuencial, por lotes y por etapas concurrentes.
 - [ ] Probar orden, cancelación y recuperación de fallas locales.
 
 ### 04. Decodificación y FFmpeg desde Rust
