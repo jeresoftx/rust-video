@@ -6,6 +6,76 @@
 
 #![forbid(unsafe_code)]
 
+use std::time::Duration;
+
+/// Dimensiones de un frame expresadas en píxeles.
+///
+/// La resolución solo describe la geometría. No implica un formato de color,
+/// un tamaño de buffer ni una calidad visual determinada.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct VideoResolution {
+    width: u32,
+    height: u32,
+}
+
+impl VideoResolution {
+    /// Crea una resolución cuando ambas dimensiones son mayores que cero.
+    pub const fn new(width: u32, height: u32) -> Option<Self> {
+        if width == 0 || height == 0 {
+            return None;
+        }
+
+        Some(Self { width, height })
+    }
+
+    /// Devuelve el ancho en píxeles.
+    pub const fn width(self) -> u32 {
+        self.width
+    }
+
+    /// Devuelve el alto en píxeles.
+    pub const fn height(self) -> u32 {
+        self.height
+    }
+}
+
+/// Información temporal y geométrica de un frame sin conservar sus píxeles.
+///
+/// El modelo permite probar orden, pérdida y latencia de forma determinista
+/// antes de conectar una fuente de video o un decodificador real.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FrameMetadata {
+    sequence: u64,
+    timestamp: Duration,
+    resolution: VideoResolution,
+}
+
+impl FrameMetadata {
+    /// Crea los metadatos de un frame emitido en un instante dado.
+    pub const fn new(sequence: u64, timestamp: Duration, resolution: VideoResolution) -> Self {
+        Self {
+            sequence,
+            timestamp,
+            resolution,
+        }
+    }
+
+    /// Devuelve el número de secuencia asignado por la fuente.
+    pub const fn sequence(self) -> u64 {
+        self.sequence
+    }
+
+    /// Devuelve la marca de tiempo relativa del frame.
+    pub const fn timestamp(self) -> Duration {
+        self.timestamp
+    }
+
+    /// Devuelve la resolución declarada para el frame.
+    pub const fn resolution(self) -> VideoResolution {
+        self.resolution
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -13,10 +83,29 @@ pub fn course_status() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::course_status;
+    use std::time::Duration;
+
+    use super::{course_status, FrameMetadata, VideoResolution};
 
     #[test]
     fn crate_base_declares_el_estado_planeado() {
         assert_eq!(course_status(), "planned");
+    }
+
+    #[test]
+    fn rechaza_resoluciones_con_dimension_cero() {
+        assert!(VideoResolution::new(0, 1_080).is_none());
+        assert!(VideoResolution::new(1_920, 0).is_none());
+    }
+
+    #[test]
+    fn conserva_los_metadatos_de_un_frame() {
+        let resolution = VideoResolution::new(1_920, 1_080).expect("resolución válida");
+        let timestamp = Duration::from_millis(42);
+        let frame = FrameMetadata::new(7, timestamp, resolution);
+
+        assert_eq!(frame.sequence(), 7);
+        assert_eq!(frame.timestamp(), timestamp);
+        assert_eq!(frame.resolution(), resolution);
     }
 }
