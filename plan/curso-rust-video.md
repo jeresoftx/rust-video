@@ -43,7 +43,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 - [x] Explicar frames, resolución, FPS, códecs y contenedores.
 - [x] Comparar datos crudos, códec y contenedor con sus tradeoffs.
-- [ ] Modelar metadatos de frame sin decodificar video real.
+- [x] Modelar metadatos de frame sin decodificar video real.
 
 ### 02. Captura e ingesta de streams
 
