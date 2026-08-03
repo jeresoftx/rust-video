@@ -297,6 +297,110 @@ impl FrameDecoder for SimulatedDecoder {
     }
 }
 
+/// Región rectangular de una detección sintética expresada en píxeles.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BoundingBox {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
+
+impl BoundingBox {
+    /// Crea una región con dimensiones positivas.
+    pub const fn new(x: u32, y: u32, width: u32, height: u32) -> Option<Self> {
+        if width == 0 || height == 0 {
+            return None;
+        }
+
+        Some(Self {
+            x,
+            y,
+            width,
+            height,
+        })
+    }
+
+    /// Devuelve la coordenada horizontal del origen.
+    pub const fn x(self) -> u32 {
+        self.x
+    }
+
+    /// Devuelve la coordenada vertical del origen.
+    pub const fn y(self) -> u32 {
+        self.y
+    }
+
+    /// Devuelve el ancho de la región.
+    pub const fn width(self) -> u32 {
+        self.width
+    }
+
+    /// Devuelve el alto de la región.
+    pub const fn height(self) -> u32 {
+        self.height
+    }
+}
+
+/// Resultado sintético de una etapa de detección.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Detection {
+    label: String,
+    area: BoundingBox,
+    confidence: f32,
+}
+
+impl Detection {
+    /// Crea una detección cuando etiqueta y confianza respetan el contrato.
+    pub fn new(label: impl Into<String>, area: BoundingBox, confidence: f32) -> Option<Self> {
+        let label = label.into();
+        if label.is_empty() || !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
+            return None;
+        }
+
+        Some(Self {
+            label,
+            area,
+            confidence,
+        })
+    }
+
+    /// Devuelve la etiqueta declarada por el adaptador de inferencia.
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// Devuelve la región declarada para la detección.
+    pub const fn area(&self) -> BoundingBox {
+        self.area
+    }
+
+    /// Devuelve la confianza normalizada de la detección.
+    pub const fn confidence(&self) -> f32 {
+        self.confidence
+    }
+}
+
+/// Umbral explícito para aceptar detecciones sintéticas.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DetectionThreshold(f32);
+
+impl DetectionThreshold {
+    /// Crea un umbral finito entre cero y uno, inclusive.
+    pub fn new(value: f32) -> Option<Self> {
+        if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+            return None;
+        }
+
+        Some(Self(value))
+    }
+
+    /// Indica si la confianza de una detección alcanza este umbral.
+    pub fn accepts(self, detection: &Detection) -> bool {
+        detection.confidence() >= self.0
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -307,8 +411,9 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        course_status, DecodeError, FrameBuffer, FrameDecoder, FrameMetadata, FrameStage, Pipeline,
-        SimulatedDecoder, StageFailure, StageOutcome, VideoResolution,
+        course_status, BoundingBox, DecodeError, Detection, DetectionThreshold, FrameBuffer,
+        FrameDecoder, FrameMetadata, FrameStage, Pipeline, SimulatedDecoder, StageFailure,
+        StageOutcome, VideoResolution,
     };
 
     #[test]
@@ -439,5 +544,23 @@ mod tests {
         let mut decoder = SimulatedDecoder::with_failure([], DecodeError::InputUnavailable);
 
         assert_eq!(decoder.decode_next(), Err(DecodeError::InputUnavailable));
+    }
+
+    #[test]
+    fn rechaza_cajas_y_confianzas_fuera_del_contrato() {
+        assert!(BoundingBox::new(0, 0, 0, 20).is_none());
+        assert!(DetectionThreshold::new(-0.1).is_none());
+        assert!(DetectionThreshold::new(1.1).is_none());
+    }
+
+    #[test]
+    fn aplica_un_umbral_explicito_a_una_deteccion_sintetica() {
+        let area = BoundingBox::new(10, 20, 30, 40).expect("caja válida");
+        let detection = Detection::new("objeto", area, 0.82).expect("confianza válida");
+        let threshold = DetectionThreshold::new(0.8).expect("umbral válido");
+
+        assert!(threshold.accepts(&detection));
+        assert_eq!(detection.label(), "objeto");
+        assert_eq!(detection.area(), area);
     }
 }
