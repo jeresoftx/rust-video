@@ -66,7 +66,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 05. Detección de objetos sobre frames
 
 - [x] Explicar inferencia, umbrales de confianza y falsos positivos.
-- [ ] Modelar resultados de detección sin incorporar un modelo aún.
+- [x] Modelar resultados de detección sin incorporar un modelo aún.
 - [x] Documentar privacidad, evaluación y límites de precisión.
 
 ### 06. Seguimiento entre frames
