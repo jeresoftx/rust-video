@@ -59,6 +59,22 @@ un remedio automático para la latencia.
 - La política de pérdida sigue perteneciendo a la ingesta; el pipeline no la
   borra ni la convierte en éxito.
 
+## Decisión de rendimiento y calidad
+
+**Benchmark: no aplica todavía.** Este capítulo ejecuta una etapa secuencial
+sobre metadatos pequeños. Un número obtenido aquí mediría el código de control
+del ejemplo, no decodificación, análisis, buffers de píxeles ni presión entre
+etapas reales. El curso no presentará ese resultado como rendimiento de video.
+
+La evidencia vigente es semántica: el reporte conserva orden, contabiliza
+falla local y diferencia cancelación de descarte. Cuando el capítulo 07 defina
+un presupuesto por etapa, podrá medir una carga representativa y documentar
+qué factores siguen fuera del experimento.
+
+**Property testing: no aplica aún.** La cobertura de escenarios concretos
+protege las reglas actuales. Si se agregan combinaciones generadas de etapas,
+fallas y cancelación, se evaluará esa dependencia con una justificación escrita.
+
 ## Siguiente paso
 
 La siguiente subtarea implementa los contratos de etapa y pruebas para orden,
