@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::time::Duration;
+use std::{collections::VecDeque, time::Duration};
 
 /// Dimensiones de un frame expresadas en píxeles.
 ///
@@ -76,6 +76,65 @@ impl FrameMetadata {
     }
 }
 
+/// Fuente que puede entregar el siguiente frame disponible.
+///
+/// El trait representa el límite entre una integración de captura o transporte
+/// y el pipeline. El curso no proporciona una fuente de cámara o red real.
+pub trait FrameSource {
+    /// Devuelve el siguiente frame cuando la fuente tiene uno disponible.
+    fn next_frame(&mut self) -> Option<FrameMetadata>;
+}
+
+/// Buffer acotado que conserva los frames más recientes.
+///
+/// Cuando la capacidad se agota, insertar un frame nuevo descarta y devuelve
+/// el frame más antiguo. De ese modo la pérdida es una decisión observable.
+#[derive(Debug)]
+pub struct FrameBuffer {
+    capacity: usize,
+    frames: VecDeque<FrameMetadata>,
+}
+
+impl FrameBuffer {
+    /// Crea un buffer con una capacidad positiva.
+    pub fn new(capacity: usize) -> Option<Self> {
+        if capacity == 0 {
+            return None;
+        }
+
+        Some(Self {
+            capacity,
+            frames: VecDeque::with_capacity(capacity),
+        })
+    }
+
+    /// Inserta un frame y devuelve el que se descartó, si la capacidad se agotó.
+    pub fn push(&mut self, frame: FrameMetadata) -> Option<FrameMetadata> {
+        let discarded = if self.frames.len() == self.capacity {
+            self.frames.pop_front()
+        } else {
+            None
+        };
+        self.frames.push_back(frame);
+        discarded
+    }
+
+    /// Extrae el frame más antiguo que sigue disponible.
+    pub fn pop_front(&mut self) -> Option<FrameMetadata> {
+        self.frames.pop_front()
+    }
+
+    /// Indica cuántos frames conserva el buffer.
+    pub fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    /// Indica si no hay frames pendientes.
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -85,7 +144,7 @@ pub fn course_status() -> &'static str {
 mod tests {
     use std::time::Duration;
 
-    use super::{course_status, FrameMetadata, VideoResolution};
+    use super::{course_status, FrameBuffer, FrameMetadata, VideoResolution};
 
     #[test]
     fn crate_base_declares_el_estado_planeado() {
@@ -107,5 +166,26 @@ mod tests {
         assert_eq!(frame.sequence(), 7);
         assert_eq!(frame.timestamp(), timestamp);
         assert_eq!(frame.resolution(), resolution);
+    }
+
+    #[test]
+    fn rechaza_buffers_sin_capacidad() {
+        assert!(FrameBuffer::new(0).is_none());
+    }
+
+    #[test]
+    fn descarta_el_frame_mas_antiguo_cuando_el_buffer_se_llena() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let first = FrameMetadata::new(1, Duration::from_millis(0), resolution);
+        let second = FrameMetadata::new(2, Duration::from_millis(33), resolution);
+        let third = FrameMetadata::new(3, Duration::from_millis(66), resolution);
+        let mut buffer = FrameBuffer::new(2).expect("capacidad válida");
+
+        assert_eq!(buffer.push(first), None);
+        assert_eq!(buffer.push(second), None);
+        assert_eq!(buffer.push(third), Some(first));
+        assert_eq!(buffer.pop_front(), Some(second));
+        assert_eq!(buffer.pop_front(), Some(third));
+        assert!(buffer.is_empty());
     }
 }
