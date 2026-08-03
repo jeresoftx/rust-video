@@ -58,6 +58,18 @@ agrega FFmpeg ni una binding nativa en este draft.
 - Un error de decodificación no autoriza el uso de `unsafe` en el dominio.
 - Este capítulo no declara soporte para ningún códec, contenedor o plataforma.
 
+## Decisión de rendimiento y calidad
+
+**Benchmark: no aplica.** El decodificador simulado solo extrae metadatos de
+una cola en memoria; no mide ni aproxima el costo de FFmpeg, un códec o I/O de
+archivos. No se agrega Criterion ni una dependencia similar para presentar una
+comparación inexistente.
+
+**Property testing: no aplica.** Los casos de final de entrada y falla tipada
+son finitos y están cubiertos por pruebas directas. Una integración real
+requeriría datos legítimos, una matriz de plataformas y una nueva decisión de
+pruebas; no se puede adelantar con datos sintéticos una afirmación sobre códecs.
+
 ## Siguiente paso
 
 La siguiente subtarea crea un contrato de decodificador y un simulador con
