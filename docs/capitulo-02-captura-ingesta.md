@@ -75,6 +75,23 @@ o audio, y hace más difícil medir las decisiones del pipeline.
 - La política elegida no es una recomendación universal: la pérdida correcta
   depende del dominio y se debe justificar por etapa.
 
+## Decisión de rendimiento y calidad
+
+**Benchmark: no aplica a la simulación actual.** El buffer prueba una política
+de capacidad y pérdida sobre metadatos pequeños; no representa captura,
+codificación, red ni una carga de memoria de producción. Publicar una cifra de
+throughput en estas condiciones comunicaría una precisión inexistente.
+
+El capítulo sí ofrece evidencia útil: pruebas de orden de salida, capacidad
+positiva y pérdida explícita. Una medición será pertinente al comparar etapas
+del pipeline bajo un presupuesto de latencia, tema reservado para el capítulo
+07.
+
+**Property testing: no aplica todavía.** Las secuencias cubiertas son cortas y
+los invariantes importantes se expresan de forma directa. Se reconsiderará al
+introducir escenarios generados de orden, cancelación y recuperación en el
+pipeline del capítulo 03.
+
 ## Siguiente paso
 
 La siguiente subtarea implementa un buffer acotado sobre los metadatos del
