@@ -88,6 +88,27 @@ dependencia no trivial.
 - El modelo posterior no sustituye una biblioteca de codificación o
   decodificación madura.
 
+## Decisión de rendimiento y calidad
+
+**Benchmark: no aplica en este capítulo.** El modelo solo crea y consulta
+valores pequeños de metadatos; no mueve buffers, decodifica códecs ni coordina
+hilos. Medirlo produciría números sin relación con la latencia de un pipeline
+de video y podría inducir conclusiones falsas.
+
+La primera medición será pertinente cuando exista una etapa de pipeline con
+trabajo representativo y un presupuesto de latencia explícito, en el capítulo
+07. Hasta entonces, la evidencia de calidad de este capítulo es distinta:
+
+- invariantes locales: una resolución nunca admite dimensión cero;
+- pruebas deterministas de secuencia, timestamp y resolución;
+- ejemplos que compilan sin cámara, códec ni dependencia nativa;
+- límites de representación declarados en vez de promesas de rendimiento.
+
+**Property testing: no aplica todavía.** Las invariantes del modelo son pocas y
+están cubiertas de manera directa. Si los capítulos de tracking o pipeline
+introducen secuencias generadas y reglas temporales, se reconsiderará una
+dependencia de property testing con su justificación correspondiente.
+
 ## Siguiente paso
 
 La siguiente subtarea define los tipos Rust y las pruebas que expresan estos
