@@ -60,7 +60,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 04. Decodificación y FFmpeg desde Rust
 
 - [x] Explicar dónde inicia y termina la responsabilidad de FFmpeg.
-- [ ] Diseñar un adaptador que pueda simularse sin FFmpeg instalado.
+- [x] Diseñar un adaptador que pueda simularse sin FFmpeg instalado.
 - [x] Documentar la dependencia externa y sus riesgos de plataforma.
 
 ### 05. Detección de objetos sobre frames

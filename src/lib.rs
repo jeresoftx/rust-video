@@ -241,6 +241,62 @@ impl PipelineReport {
     }
 }
 
+/// Errores que una integración de decodificación puede comunicar al dominio.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DecodeError {
+    /// La entrada o la dependencia externa no está disponible.
+    InputUnavailable,
+    /// La entrada no pudo interpretarse bajo el contrato del adaptador.
+    InvalidInput,
+}
+
+/// Adaptador que entrega frames decodificados sin revelar la implementación externa.
+pub trait FrameDecoder {
+    /// Decodifica el siguiente frame, indica final de entrada o comunica un error.
+    fn decode_next(&mut self) -> Result<Option<FrameMetadata>, DecodeError>;
+}
+
+/// Decodificador determinista para ejemplos y pruebas del curso.
+#[derive(Debug)]
+pub struct SimulatedDecoder {
+    frames: VecDeque<FrameMetadata>,
+    pending_failure: Option<DecodeError>,
+}
+
+impl SimulatedDecoder {
+    /// Crea un decodificador que entrega los frames proporcionados en su orden original.
+    pub fn new<I>(frames: I) -> Self
+    where
+        I: IntoIterator<Item = FrameMetadata>,
+    {
+        Self {
+            frames: frames.into_iter().collect(),
+            pending_failure: None,
+        }
+    }
+
+    /// Crea un decodificador que comunica una falla antes de leer su entrada.
+    pub fn with_failure<I>(frames: I, failure: DecodeError) -> Self
+    where
+        I: IntoIterator<Item = FrameMetadata>,
+    {
+        Self {
+            frames: frames.into_iter().collect(),
+            pending_failure: Some(failure),
+        }
+    }
+}
+
+impl FrameDecoder for SimulatedDecoder {
+    fn decode_next(&mut self) -> Result<Option<FrameMetadata>, DecodeError> {
+        if let Some(failure) = self.pending_failure.take() {
+            return Err(failure);
+        }
+
+        Ok(self.frames.pop_front())
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -251,8 +307,8 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        course_status, FrameBuffer, FrameMetadata, FrameStage, Pipeline, StageFailure,
-        StageOutcome, VideoResolution,
+        course_status, DecodeError, FrameBuffer, FrameDecoder, FrameMetadata, FrameStage, Pipeline,
+        SimulatedDecoder, StageFailure, StageOutcome, VideoResolution,
     };
 
     #[test]
@@ -350,5 +406,38 @@ mod tests {
 
         assert_eq!(report.forwarded_sequences(), &[1]);
         assert!(report.was_cancelled());
+    }
+
+    #[test]
+    fn el_decodificador_simulado_entrega_frames_en_orden() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let frames = [
+            FrameMetadata::new(1, Duration::ZERO, resolution),
+            FrameMetadata::new(2, Duration::from_millis(33), resolution),
+        ];
+        let mut decoder = SimulatedDecoder::new(frames);
+
+        assert_eq!(
+            decoder
+                .decode_next()
+                .expect("sin error")
+                .map(FrameMetadata::sequence),
+            Some(1)
+        );
+        assert_eq!(
+            decoder
+                .decode_next()
+                .expect("sin error")
+                .map(FrameMetadata::sequence),
+            Some(2)
+        );
+        assert_eq!(decoder.decode_next().expect("sin error"), None);
+    }
+
+    #[test]
+    fn el_decodificador_expone_una_falla_sin_ocultar_su_tipo() {
+        let mut decoder = SimulatedDecoder::with_failure([], DecodeError::InputUnavailable);
+
+        assert_eq!(decoder.decode_next(), Err(DecodeError::InputUnavailable));
     }
 }
