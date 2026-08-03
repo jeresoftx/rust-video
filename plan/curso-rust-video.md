@@ -48,8 +48,8 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 02. Captura e ingesta de streams
 
 - [ ] Modelar fuentes, timestamps, buffers y pérdida de frames.
-- [ ] Referenciar protocolos canónicos desde `rust-networking`.
-- [ ] Documentar la diferencia entre ingesta y reproducción.
+- [x] Referenciar protocolos canónicos desde `rust-networking`.
+- [x] Documentar la diferencia entre ingesta y reproducción.
 
 ### 03. Pipeline de procesamiento en tiempo real
 
