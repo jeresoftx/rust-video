@@ -135,6 +135,112 @@ impl FrameBuffer {
     }
 }
 
+/// Falla local de una etapa que puede registrarse sin cancelar el pipeline.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StageFailure {
+    message: &'static str,
+}
+
+impl StageFailure {
+    /// Crea una falla con un mensaje estático de diagnóstico.
+    pub const fn new(message: &'static str) -> Self {
+        Self { message }
+    }
+
+    /// Devuelve el mensaje de diagnóstico.
+    pub const fn message(self) -> &'static str {
+        self.message
+    }
+}
+
+/// Resultado explícito de procesar un frame en una etapa.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StageOutcome {
+    /// El frame puede avanzar a la siguiente etapa.
+    Forward(FrameMetadata),
+    /// La etapa descarta el frame según una decisión documentada.
+    Dropped,
+    /// El pipeline no debe procesar más frames.
+    Cancelled,
+    /// La etapa tuvo una falla local y el pipeline puede continuar.
+    Failed(StageFailure),
+}
+
+/// Etapa síncrona que procesa un frame dentro de un pipeline.
+pub trait FrameStage {
+    /// Procesa un frame y declara cómo debe continuar el pipeline.
+    fn process(&mut self, frame: FrameMetadata) -> StageOutcome;
+}
+
+/// Ejecuta una etapa sobre una secuencia finita y determinista de frames.
+#[derive(Debug)]
+pub struct Pipeline<S> {
+    stage: S,
+}
+
+impl<S> Pipeline<S>
+where
+    S: FrameStage,
+{
+    /// Crea un pipeline secuencial con una etapa.
+    pub const fn new(stage: S) -> Self {
+        Self { stage }
+    }
+
+    /// Ejecuta la etapa y conserva evidencia de los resultados observables.
+    pub fn run<I>(mut self, frames: I) -> PipelineReport
+    where
+        I: IntoIterator<Item = FrameMetadata>,
+    {
+        let mut report = PipelineReport::default();
+
+        for frame in frames {
+            match self.stage.process(frame) {
+                StageOutcome::Forward(frame) => report.forwarded_sequences.push(frame.sequence()),
+                StageOutcome::Dropped => report.dropped_frames += 1,
+                StageOutcome::Failed(failure) => report.failures.push(failure),
+                StageOutcome::Cancelled => {
+                    report.cancelled = true;
+                    break;
+                }
+            }
+        }
+
+        report
+    }
+}
+
+/// Evidencia de una ejecución secuencial del pipeline.
+#[derive(Debug, Default)]
+pub struct PipelineReport {
+    forwarded_sequences: Vec<u64>,
+    dropped_frames: usize,
+    failures: Vec<StageFailure>,
+    cancelled: bool,
+}
+
+impl PipelineReport {
+    /// Devuelve las secuencias que avanzaron en el mismo orden de entrada.
+    pub fn forwarded_sequences(&self) -> &[u64] {
+        &self.forwarded_sequences
+    }
+
+    /// Devuelve cuántos frames se descartaron por una etapa.
+    pub const fn dropped_frames(&self) -> usize {
+        self.dropped_frames
+    }
+
+    /// Devuelve las fallas locales registradas durante la ejecución.
+    pub fn failures(&self) -> &[StageFailure] {
+        &self.failures
+    }
+
+    /// Indica si una etapa canceló el recorrido.
+    pub const fn was_cancelled(&self) -> bool {
+        self.cancelled
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -144,7 +250,10 @@ pub fn course_status() -> &'static str {
 mod tests {
     use std::time::Duration;
 
-    use super::{course_status, FrameBuffer, FrameMetadata, VideoResolution};
+    use super::{
+        course_status, FrameBuffer, FrameMetadata, FrameStage, Pipeline, StageFailure,
+        StageOutcome, VideoResolution,
+    };
 
     #[test]
     fn crate_base_declares_el_estado_planeado() {
@@ -187,5 +296,59 @@ mod tests {
         assert_eq!(buffer.pop_front(), Some(second));
         assert_eq!(buffer.pop_front(), Some(third));
         assert!(buffer.is_empty());
+    }
+
+    #[derive(Default)]
+    struct FallaEnLaSecuencia {
+        failure_sequence: u64,
+        cancel_sequence: Option<u64>,
+    }
+
+    impl FrameStage for FallaEnLaSecuencia {
+        fn process(&mut self, frame: FrameMetadata) -> StageOutcome {
+            if self.cancel_sequence == Some(frame.sequence()) {
+                return StageOutcome::Cancelled;
+            }
+            if self.failure_sequence == frame.sequence() {
+                return StageOutcome::Failed(StageFailure::new("falla simulada"));
+            }
+
+            StageOutcome::Forward(frame)
+        }
+    }
+
+    #[test]
+    fn conserva_orden_y_recupera_una_falla_local() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let frames = (1..=3).map(|sequence| {
+            FrameMetadata::new(sequence, Duration::from_millis(sequence * 33), resolution)
+        });
+        let stage = FallaEnLaSecuencia {
+            failure_sequence: 2,
+            cancel_sequence: None,
+        };
+
+        let report = Pipeline::new(stage).run(frames);
+
+        assert_eq!(report.forwarded_sequences(), &[1, 3]);
+        assert_eq!(report.failures().len(), 1);
+        assert!(!report.was_cancelled());
+    }
+
+    #[test]
+    fn detiene_el_recorrido_cuando_una_etapa_cancela() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let frames = (1..=3).map(|sequence| {
+            FrameMetadata::new(sequence, Duration::from_millis(sequence * 33), resolution)
+        });
+        let stage = FallaEnLaSecuencia {
+            failure_sequence: 0,
+            cancel_sequence: Some(2),
+        };
+
+        let report = Pipeline::new(stage).run(frames);
+
+        assert_eq!(report.forwarded_sequences(), &[1]);
+        assert!(report.was_cancelled());
     }
 }
