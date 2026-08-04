@@ -51,6 +51,19 @@ rostros, cámaras o contenido privado.
 - Cualquier modelo, dataset o inferencia real exige autorización humana,
   procedencia legítima y una política de privacidad específica.
 
+## Decisión de rendimiento y validación
+
+**Benchmark: no aplica.** Crear y filtrar detecciones sintéticas no representa
+inferencia, transferencia de tensores ni el desempeño de un modelo. No se
+añade una dependencia de benchmarking para producir una cifra sin significado
+operativo.
+
+**Property testing: no aplica todavía.** El contrato de región, confianza y
+umbral se cubre con fronteras deterministas. Tampoco puede sustituir la
+evaluación de falsos positivos, falsos negativos, sesgo o privacidad: esas
+preguntas requieren un modelo, datos legítimos y una revisión humana que este
+draft no pretende adelantar.
+
 ## Siguiente paso
 
 La siguiente subtarea añade tipos deterministas de región y detección, con
