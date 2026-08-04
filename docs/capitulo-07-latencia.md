@@ -52,6 +52,24 @@ un modelo de IA.
 - La calidad de salida sigue siendo una decisión: menor latencia puede implicar
   pérdida de frames, menos análisis o resultados incompletos.
 
+## Decisión de rendimiento y validación
+
+**Medición local: aplica.** El ejemplo usa `Instant` para repetir la
+construcción y comprobación del presupuesto en una misma máquina. Es una señal
+local de regresión del modelo, no una comparación entre equipos ni un perfil de
+una integración real.
+
+**Suite de benchmarks: no aplica todavía.** No se agrega `criterion` porque el
+crate no ejecuta códecs, I/O, modelos ni procesamiento de píxeles. Una cifra de
+esa suite aparentaría precisión sobre un sistema que aún no existe. Si un
+capítulo posterior introduce un contrato de rendimiento repetible y relevante,
+la dependencia se evaluará con su justificación escrita.
+
+**Property testing: no aplica todavía.** Las reglas son suma de duraciones,
+límite positivo y nombres de etapa no vacíos; los casos deterministas cubren
+sus fronteras de forma legible. Si se incorporan planificadores, colas o
+secuencias amplias de políticas de backpressure, se reconsiderará.
+
 ## Siguiente paso
 
 La siguiente subtarea modela presupuestos positivos y pruebas de suma antes de
