@@ -52,6 +52,17 @@ reasignación sin una cámara ni un modelo.
 - La tolerancia de oclusión no es una recomendación universal.
 - Reasignar una identidad expirada debe ser visible en el contrato.
 
+## Decisión de rendimiento y validación
+
+**Benchmark: no aplica.** El track actual actualiza unos cuantos metadatos y
+no realiza asociación visual. Medirlo no representa el costo de un algoritmo de
+tracking real ni de una fuente de video.
+
+**Property testing: no aplica todavía.** Las transiciones de estado y la
+frontera de expiración se cubren con casos deterministas. Si el curso introduce
+un registro de muchos tracks, secuencias generadas de oclusión y reglas de
+asociación, se reconsiderará la dependencia con una justificación escrita.
+
 ## Siguiente paso
 
 La siguiente subtarea implementa tracks con expiración determinista y pruebas
