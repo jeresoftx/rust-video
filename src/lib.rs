@@ -480,6 +480,79 @@ impl DetectionThreshold {
     }
 }
 
+/// Anotación lateral derivada de una detección ya aceptada.
+///
+/// La anotación no modifica bytes de imagen. Conserva solo los datos mínimos
+/// que un consumidor podría renderizar o inspeccionar bajo su propio contrato.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Annotation {
+    label: String,
+    area: BoundingBox,
+    confidence: f32,
+}
+
+impl Annotation {
+    /// Crea una anotación lateral a partir de una detección existente.
+    pub fn from_detection(detection: &Detection) -> Self {
+        Self {
+            label: detection.label().to_owned(),
+            area: detection.area(),
+            confidence: detection.confidence(),
+        }
+    }
+
+    /// Devuelve la etiqueta que se asociará visualmente al frame.
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// Devuelve la región de la anotación.
+    pub const fn area(&self) -> BoundingBox {
+        self.area
+    }
+
+    /// Devuelve la confianza declarada por la detección de origen.
+    pub const fn confidence(&self) -> f32 {
+        self.confidence
+    }
+}
+
+/// Salida determinista de un frame y sus anotaciones laterales.
+///
+/// El tipo no contiene píxeles, no renderiza overlays y no persiste datos. Su
+/// única responsabilidad es mantener la relación verificable entre frame y
+/// resultados de análisis.
+#[derive(Debug)]
+pub struct FrameOutput {
+    frame: FrameMetadata,
+    annotations: Vec<Annotation>,
+}
+
+impl FrameOutput {
+    /// Crea una salida vacía para un frame ya identificado.
+    pub const fn new(frame: FrameMetadata) -> Self {
+        Self {
+            frame,
+            annotations: Vec::new(),
+        }
+    }
+
+    /// Añade una anotación lateral sin modificar el frame de origen.
+    pub fn add_annotation(&mut self, annotation: Annotation) {
+        self.annotations.push(annotation);
+    }
+
+    /// Devuelve los metadatos del frame asociado a la salida.
+    pub const fn frame(&self) -> FrameMetadata {
+        self.frame
+    }
+
+    /// Devuelve las anotaciones en el orden en que se agregaron.
+    pub fn annotations(&self) -> &[Annotation] {
+        &self.annotations
+    }
+}
+
 /// Identificador asignado por una decisión de asociación explícita.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TrackId(u64);
@@ -664,10 +737,10 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        course_status, BoundingBox, DecodeError, Detection, DetectionThreshold, FrameBuffer,
-        FrameDecoder, FrameMetadata, FrameStage, LatencyBudget, Pipeline, ProcessingPlan,
-        SharedFramePayload, SimulatedDecoder, StageFailure, StageLatency, StageOutcome, Track,
-        TrackId, TrackStatus, VideoResolution,
+        course_status, Annotation, BoundingBox, DecodeError, Detection, DetectionThreshold,
+        FrameBuffer, FrameDecoder, FrameMetadata, FrameOutput, FrameStage, LatencyBudget, Pipeline,
+        ProcessingPlan, SharedFramePayload, SimulatedDecoder, StageFailure, StageLatency,
+        StageOutcome, Track, TrackId, TrackStatus, VideoResolution,
     };
 
     #[test]
@@ -838,6 +911,23 @@ mod tests {
         assert!(threshold.accepts(&detection));
         assert_eq!(detection.label(), "objeto");
         assert_eq!(detection.area(), area);
+    }
+
+    #[test]
+    fn conserva_las_anotaciones_como_metadatos_laterales_del_frame() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let frame = FrameMetadata::new(12, Duration::from_millis(396), resolution);
+        let area = BoundingBox::new(10, 20, 30, 40).expect("caja válida");
+        let detection = Detection::new("objeto", area, 0.82).expect("detección válida");
+        let mut output = FrameOutput::new(frame);
+
+        output.add_annotation(Annotation::from_detection(&detection));
+
+        assert_eq!(output.frame(), frame);
+        assert_eq!(output.annotations().len(), 1);
+        assert_eq!(output.annotations()[0].label(), "objeto");
+        assert_eq!(output.annotations()[0].area(), area);
+        assert_eq!(output.annotations()[0].confidence(), 0.82);
     }
 
     #[test]
