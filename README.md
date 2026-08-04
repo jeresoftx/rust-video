@@ -12,24 +12,27 @@ tiempo real es un área de construcción directa del autor (RFC-0001 §1 y §10)
 
 ## Estado
 
-El curso está en planificación. Su [Project operativo](https://github.com/users/jeresoftx/projects/29)
-convierte el temario vigente en milestones e issues antes de escribir código de
-curso. La ampliación propuesta a temas audiovisuales avanzados vive en
-`RFC-0004`, aún en borrador; no forma parte del alcance de implementación.
+El curso cuenta con un **draft completo pendiente de revisión humana**. Su
+[Project operativo](https://github.com/users/jeresoftx/projects/29) conserva
+la trazabilidad de capítulos, auditorías y la revisión editorial, técnica y de
+privacidad. El draft no está `reviewed` ni `published`.
+
+La ampliación propuesta a temas audiovisuales avanzados vive en `RFC-0004`,
+aún en borrador; no forma parte del alcance de implementación.
 
 ## Temario Base
 
 | # | Capítulo | Estado |
 |---|---|---|
-| 01 | Fundamentos de video: frames, códecs y contenedores | planned |
-| 02 | Captura e ingesta de streams | planned |
-| 03 | Pipeline de procesamiento en tiempo real | planned |
-| 04 | Decodificación y manejo de FFmpeg desde Rust | planned |
-| 05 | Detección de objetos sobre frames | planned |
-| 06 | Seguimiento entre frames | planned |
-| 07 | Rendimiento y presupuesto de latencia | planned |
-| 08 | Procesamiento paralelo y zero-copy | planned |
-| 09 | Salida y anotación del stream | planned |
+| 01 | Fundamentos de video: frames, códecs y contenedores | draft |
+| 02 | Captura e ingesta de streams | draft |
+| 03 | Pipeline de procesamiento en tiempo real | draft |
+| 04 | Decodificación y manejo de FFmpeg desde Rust | draft |
+| 05 | Detección de objetos sobre frames | draft |
+| 06 | Seguimiento entre frames | draft |
+| 07 | Rendimiento y presupuesto de latencia | draft |
+| 08 | Procesamiento paralelo y zero-copy | draft |
+| 09 | Salida y anotación del stream | draft |
 
 ## Prerrequisitos y Lugar En El Camino
 
