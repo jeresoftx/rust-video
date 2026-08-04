@@ -90,9 +90,9 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 ### 09. Salida y anotación del stream
 
-- [ ] Modelar overlays, resultados de inferencia y salida de pipeline.
-- [ ] Comparar anotación destructiva, metadatos laterales y privacidad.
-- [ ] Cerrar con una demostración determinista de pipeline completo.
+- [x] Modelar overlays, resultados de inferencia y salida de pipeline.
+- [x] Comparar anotación destructiva, metadatos laterales y privacidad.
+- [x] Cerrar con una demostración determinista de pipeline completo.
 
 ## Auditoría Y Revisión
 
