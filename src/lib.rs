@@ -727,9 +727,9 @@ impl LatencyBudget {
     }
 }
 
-/// Declara que el crate base se puede enlazar antes de introducir capítulos.
+/// Declara que el crate contiene un draft completo pendiente de revisión humana.
 pub fn course_status() -> &'static str {
-    "planned"
+    "draft"
 }
 
 #[cfg(test)]
@@ -744,8 +744,8 @@ mod tests {
     };
 
     #[test]
-    fn crate_base_declares_el_estado_planeado() {
-        assert_eq!(course_status(), "planned");
+    fn crate_declara_el_estado_de_borrador() {
+        assert_eq!(course_status(), "draft");
     }
 
     #[test]
