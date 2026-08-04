@@ -57,6 +57,25 @@ runtime asíncrono ni una biblioteca de concurrencia.
 - No se usan punteros, FFI ni `unsafe` para perseguir zero-copy.
 - La fuente de video real y su propiedad de buffers siguen fuera de alcance.
 
+## Decisión de rendimiento y validación
+
+**Benchmark: no aplica todavía.** Cronometrar una clonación de `Arc` o un canal
+aislado no demostraría rendimiento de un pipeline de video. El costo útil
+depende de tamaño, memoria, contención, trabajo de cada etapa y entorno. El
+capítulo conserva ejemplos ejecutables y la medición local del capítulo 07;
+no agrega `criterion` sin una pregunta de rendimiento concreta.
+
+**Property testing: no aplica todavía.** Los contratos actuales tienen pocas
+fronteras claras: límites positivos, capacidad en vuelo y almacenamiento
+compartido. Las pruebas deterministas muestran esas reglas directamente. Si se
+añade un planificador con políticas de descarte, reintento o reparto por
+workers, se reconsiderarán secuencias generadas junto con la justificación de
+la dependencia.
+
+**Seguridad: aplica por diseño.** El módulo mantiene `unsafe` prohibido en el
+crate y usa `Arc` y canales de la biblioteca estándar. Zero-copy no es razón
+suficiente para abandonar esos límites.
+
 ## Conexiones canónicas
 
 - El límite de trabajo en vuelo conecta con backpressure y concurrencia.
