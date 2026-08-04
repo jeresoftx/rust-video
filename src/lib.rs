@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::VecDeque, time::Duration};
+use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 /// Dimensiones de un frame expresadas en píxeles.
 ///
@@ -132,6 +132,85 @@ impl FrameBuffer {
     /// Indica si no hay frames pendientes.
     pub fn is_empty(&self) -> bool {
         self.frames.is_empty()
+    }
+}
+
+/// Bytes de un frame que pueden compartirse entre etapas de solo lectura.
+///
+/// La conversión inicial delimita la propiedad de la fuente. Las clonaciones
+/// posteriores comparten la misma asignación mediante `Arc` y no duplican los
+/// bytes; ello no elimina por sí solo todas las asignaciones del sistema.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SharedFramePayload {
+    bytes: Arc<[u8]>,
+}
+
+impl SharedFramePayload {
+    /// Convierte los bytes de entrada en un payload compartible.
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self {
+            bytes: Arc::from(bytes),
+        }
+    }
+
+    /// Devuelve los bytes como una vista de solo lectura.
+    pub fn as_slice(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    /// Devuelve la cantidad de bytes disponibles en el payload.
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    /// Indica si el payload no contiene bytes.
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
+    /// Indica si dos payloads comparten la misma asignación de bytes.
+    pub fn shares_storage_with(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.bytes, &other.bytes)
+    }
+}
+
+/// Límites explícitos para trabajo concurrente dentro del modelo local.
+///
+/// El plan no crea hilos ni garantiza rendimiento. Expresa el número máximo de
+/// workers y de frames que una integración puede dejar en vuelo antes de aplicar
+/// la política de backpressure que corresponda.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ProcessingPlan {
+    worker_count: usize,
+    maximum_in_flight: usize,
+}
+
+impl ProcessingPlan {
+    /// Crea un plan cuando workers y capacidad en vuelo son positivos.
+    pub const fn new(worker_count: usize, maximum_in_flight: usize) -> Option<Self> {
+        if worker_count == 0 || maximum_in_flight == 0 {
+            return None;
+        }
+
+        Some(Self {
+            worker_count,
+            maximum_in_flight,
+        })
+    }
+
+    /// Devuelve cuántos workers declara el plan.
+    pub const fn worker_count(self) -> usize {
+        self.worker_count
+    }
+
+    /// Devuelve el máximo de frames permitidos en vuelo.
+    pub const fn maximum_in_flight(self) -> usize {
+        self.maximum_in_flight
+    }
+
+    /// Indica si una cola con el trabajo dado puede aceptar otro frame.
+    pub const fn can_accept(self, in_flight: usize) -> bool {
+        in_flight < self.maximum_in_flight
     }
 }
 
@@ -586,8 +665,9 @@ mod tests {
 
     use super::{
         course_status, BoundingBox, DecodeError, Detection, DetectionThreshold, FrameBuffer,
-        FrameDecoder, FrameMetadata, FrameStage, LatencyBudget, Pipeline, SimulatedDecoder,
-        StageFailure, StageLatency, StageOutcome, Track, TrackId, TrackStatus, VideoResolution,
+        FrameDecoder, FrameMetadata, FrameStage, LatencyBudget, Pipeline, ProcessingPlan,
+        SharedFramePayload, SimulatedDecoder, StageFailure, StageLatency, StageOutcome, Track,
+        TrackId, TrackStatus, VideoResolution,
     };
 
     #[test]
@@ -631,6 +711,28 @@ mod tests {
         assert_eq!(buffer.pop_front(), Some(second));
         assert_eq!(buffer.pop_front(), Some(third));
         assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn comparte_el_payload_sin_duplicar_su_almacenamiento_despues_de_la_entrada() {
+        let payload = SharedFramePayload::from_bytes(vec![1, 2, 3, 4]);
+        let stage_copy = payload.clone();
+
+        assert_eq!(stage_copy.as_slice(), &[1, 2, 3, 4]);
+        assert!(payload.shares_storage_with(&stage_copy));
+        assert!(!payload.is_empty());
+    }
+
+    #[test]
+    fn hace_visible_el_limite_de_trabajo_en_vuelo() {
+        assert!(ProcessingPlan::new(0, 1).is_none());
+        assert!(ProcessingPlan::new(1, 0).is_none());
+
+        let plan = ProcessingPlan::new(2, 3).expect("plan válido");
+        assert_eq!(plan.worker_count(), 2);
+        assert_eq!(plan.maximum_in_flight(), 3);
+        assert!(plan.can_accept(2));
+        assert!(!plan.can_accept(3));
     }
 
     #[derive(Default)]
