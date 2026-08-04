@@ -14,6 +14,12 @@ pedagógicas, no promete publicación.
 3. Latencia, paralelismo, zero-copy, salida y anotación.
 4. Auditoría de draft y revisión humana obligatoria.
 
+## Estado Actual
+
+Los nueve capítulos están construidos como draft con contratos, ejemplos,
+ejercicios, soluciones y decisiones de validación. La siguiente etapa es la
+revisión humana editorial, técnica y de privacidad; no equivale a publicación.
+
 El [Project operativo](https://github.com/users/jeresoftx/projects/29) conserva
 issues, milestones y ruta crítica. El plan detallado vive en
 [plan/curso-rust-video.md](plan/curso-rust-video.md).

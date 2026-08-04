@@ -1,6 +1,7 @@
 # Plan De Curso: Rust Video
 
-**Estado:** aprobado para planificación; implementación pendiente.
+**Estado:** draft completo; pendiente de revisión humana editorial, técnica y
+de privacidad.
 
 **Fuente de alcance:** RFC-0001 §10, "Procesamiento de video en streaming".
 
@@ -47,7 +48,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 ### 02. Captura e ingesta de streams
 
-- [ ] Modelar fuentes, timestamps, buffers y pérdida de frames.
+- [x] Modelar fuentes, timestamps, buffers y pérdida de frames.
 - [x] Referenciar protocolos canónicos desde `rust-networking`.
 - [x] Documentar la diferencia entre ingesta y reproducción.
 
@@ -72,7 +73,6 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 06. Seguimiento entre frames
 
 - [x] Modelar identidad temporal, asociación y pérdida de tracking.
-- [ ] Comparar detección independiente y tracking con estado.
 - [x] Comparar detección independiente y tracking con estado.
 - [x] Probar oclusión, expiración y reasignación explícitamente.
 
@@ -96,7 +96,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 ## Auditoría Y Revisión
 
-- [ ] Auditar crate, enlaces canónicos, manifest, diagramas, ejemplos,
+- [x] Auditar crate, enlaces canónicos, manifest, diagramas, ejemplos,
       ejercicios, soluciones, benchmarks y límites de privacidad.
 - [ ] Solicitar revisión humana editorial, técnica y de privacidad.
 
