@@ -53,6 +53,23 @@ un renderer, grabador o stream de producción.
 - No se persisten frames, payloads ni anotaciones.
 - Un renderizador futuro debe justificar qué datos muestra, guarda y comparte.
 
+## Decisión de rendimiento y validación
+
+**Benchmark: no aplica todavía.** El modelo solo crea estructuras de
+metadatos; no hay renderer, códec, I/O ni almacenamiento que medir. Un
+benchmark de `Vec` y `String` no respondería una pregunta útil para un sistema
+de video ni justificaría agregar `criterion`.
+
+**Property testing: no aplica todavía.** La relación entre detección y
+anotación, y el orden de inserción, se verifican con ejemplos deterministas.
+Si un capítulo futuro incorpora composición de overlays, serialización o
+políticas de redacción de datos, se reconsiderarán propiedades generadas con
+una justificación explícita.
+
+**Privacidad: aplica por límite de alcance.** La demostración no toma, guarda
+ni transmite medios. Un consumidor futuro no debe interpretar este modelo como
+autorización para tratar datos de personas o streams privados.
+
 ## Siguiente paso
 
 La siguiente subtarea implementa anotaciones laterales y una salida de frame
