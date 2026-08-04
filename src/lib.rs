@@ -401,6 +401,93 @@ impl DetectionThreshold {
     }
 }
 
+/// Identificador asignado por una decisión de asociación explícita.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TrackId(u64);
+
+impl TrackId {
+    /// Crea un identificador de track.
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    /// Devuelve el valor estable del identificador.
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+}
+
+/// Estado observable de una identidad temporal.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TrackStatus {
+    /// El track recibió una observación reciente.
+    Active,
+    /// El track sigue reservado durante una oclusión limitada.
+    Occluded,
+    /// El track ya no acepta asociaciones y requiere reasignación explícita.
+    Expired,
+}
+
+/// Estado mínimo de un track entre frames.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Track {
+    id: TrackId,
+    last_frame: FrameMetadata,
+    missed_frames: u32,
+    max_missed_frames: u32,
+    status: TrackStatus,
+}
+
+impl Track {
+    /// Crea un track activo con una tolerancia de oclusión finita.
+    pub const fn new(id: TrackId, first_frame: FrameMetadata, max_missed_frames: u32) -> Self {
+        Self {
+            id,
+            last_frame: first_frame,
+            missed_frames: 0,
+            max_missed_frames,
+            status: TrackStatus::Active,
+        }
+    }
+
+    /// Devuelve el identificador de esta identidad temporal.
+    pub const fn id(self) -> TrackId {
+        self.id
+    }
+
+    /// Devuelve el estado actual del track.
+    pub const fn status(self) -> TrackStatus {
+        self.status
+    }
+
+    /// Registra una observación asociada y devuelve si el track pudo aceptarla.
+    pub fn observe(&mut self, frame: FrameMetadata) -> bool {
+        if self.status == TrackStatus::Expired {
+            return false;
+        }
+
+        self.last_frame = frame;
+        self.missed_frames = 0;
+        self.status = TrackStatus::Active;
+        true
+    }
+
+    /// Registra la ausencia de una asociación y actualiza el estado de oclusión.
+    pub fn mark_missing(&mut self) -> TrackStatus {
+        if self.status == TrackStatus::Expired {
+            return self.status;
+        }
+
+        self.missed_frames = self.missed_frames.saturating_add(1);
+        self.status = if self.missed_frames > self.max_missed_frames {
+            TrackStatus::Expired
+        } else {
+            TrackStatus::Occluded
+        };
+        self.status
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -413,7 +500,7 @@ mod tests {
     use super::{
         course_status, BoundingBox, DecodeError, Detection, DetectionThreshold, FrameBuffer,
         FrameDecoder, FrameMetadata, FrameStage, Pipeline, SimulatedDecoder, StageFailure,
-        StageOutcome, VideoResolution,
+        StageOutcome, Track, TrackId, TrackStatus, VideoResolution,
     };
 
     #[test]
@@ -562,5 +649,21 @@ mod tests {
         assert!(threshold.accepts(&detection));
         assert_eq!(detection.label(), "objeto");
         assert_eq!(detection.area(), area);
+    }
+
+    #[test]
+    fn expira_un_track_tras_oclusiones_y_exige_reasignacion() {
+        let resolution = VideoResolution::new(640, 480).expect("resolución válida");
+        let first = FrameMetadata::new(1, Duration::ZERO, resolution);
+        let second = FrameMetadata::new(2, Duration::from_millis(33), resolution);
+        let mut track = Track::new(TrackId::new(7), first, 1);
+
+        assert_eq!(track.mark_missing(), TrackStatus::Occluded);
+        assert_eq!(track.mark_missing(), TrackStatus::Expired);
+        assert!(!track.observe(second));
+        assert_eq!(track.status(), TrackStatus::Expired);
+
+        let reassigned = Track::new(TrackId::new(8), second, 1);
+        assert_eq!(reassigned.id(), TrackId::new(8));
     }
 }

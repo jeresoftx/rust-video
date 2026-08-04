@@ -71,10 +71,10 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 ### 06. Seguimiento entre frames
 
-- [ ] Modelar identidad temporal, asociación y pérdida de tracking.
+- [x] Modelar identidad temporal, asociación y pérdida de tracking.
 - [ ] Comparar detección independiente y tracking con estado.
 - [x] Comparar detección independiente y tracking con estado.
-- [ ] Probar oclusión, expiración y reasignación explícitamente.
+- [x] Probar oclusión, expiración y reasignación explícitamente.
 
 ### 07. Rendimiento y presupuesto de latencia
 
