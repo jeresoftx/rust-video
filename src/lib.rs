@@ -488,6 +488,93 @@ impl Track {
     }
 }
 
+/// Duración observada o estimada para una etapa del recorrido local.
+///
+/// No representa una garantía de producción: su propósito es hacer explícito
+/// qué partes componen el presupuesto de latencia que se está razonando.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StageLatency {
+    name: &'static str,
+    duration: Duration,
+}
+
+impl StageLatency {
+    /// Crea una duración para una etapa identificada por un nombre no vacío.
+    pub const fn new(name: &'static str, duration: Duration) -> Option<Self> {
+        if name.is_empty() {
+            return None;
+        }
+
+        Some(Self { name, duration })
+    }
+
+    /// Devuelve el nombre de la etapa presupuestada.
+    pub const fn name(self) -> &'static str {
+        self.name
+    }
+
+    /// Devuelve la duración registrada para la etapa.
+    pub const fn duration(self) -> Duration {
+        self.duration
+    }
+}
+
+/// Presupuesto local de latencia compuesto por etapas explícitas.
+///
+/// El presupuesto no mide una cámara, FFmpeg, una GPU ni una red. Solo permite
+/// sumar y comprobar duraciones que el ejemplo o quien estudia declaró.
+#[derive(Debug)]
+pub struct LatencyBudget {
+    limit: Duration,
+    stages: Vec<StageLatency>,
+}
+
+impl LatencyBudget {
+    /// Crea un presupuesto con un límite positivo de latencia extremo a extremo.
+    pub fn new(limit: Duration) -> Option<Self> {
+        if limit.is_zero() {
+            return None;
+        }
+
+        Some(Self {
+            limit,
+            stages: Vec::new(),
+        })
+    }
+
+    /// Añade una etapa al presupuesto cuando su nombre es válido.
+    pub fn add_stage(&mut self, name: &'static str, duration: Duration) -> bool {
+        let Some(stage) = StageLatency::new(name, duration) else {
+            return false;
+        };
+
+        self.stages.push(stage);
+        true
+    }
+
+    /// Devuelve el límite total que se decidió para este recorrido.
+    pub const fn limit(&self) -> Duration {
+        self.limit
+    }
+
+    /// Devuelve las etapas que componen el presupuesto en orden de registro.
+    pub fn stages(&self) -> &[StageLatency] {
+        &self.stages
+    }
+
+    /// Suma las duraciones declaradas por etapa sin producir una medición externa.
+    pub fn total(&self) -> Duration {
+        self.stages.iter().fold(Duration::ZERO, |total, stage| {
+            total.saturating_add(stage.duration())
+        })
+    }
+
+    /// Indica si las etapas declaradas caben dentro del límite elegido.
+    pub fn is_within_limit(&self) -> bool {
+        self.total() <= self.limit
+    }
+}
+
 /// Declara que el crate base se puede enlazar antes de introducir capítulos.
 pub fn course_status() -> &'static str {
     "planned"
@@ -499,8 +586,8 @@ mod tests {
 
     use super::{
         course_status, BoundingBox, DecodeError, Detection, DetectionThreshold, FrameBuffer,
-        FrameDecoder, FrameMetadata, FrameStage, Pipeline, SimulatedDecoder, StageFailure,
-        StageOutcome, Track, TrackId, TrackStatus, VideoResolution,
+        FrameDecoder, FrameMetadata, FrameStage, LatencyBudget, Pipeline, SimulatedDecoder,
+        StageFailure, StageLatency, StageOutcome, Track, TrackId, TrackStatus, VideoResolution,
     };
 
     #[test]
@@ -665,5 +752,30 @@ mod tests {
 
         let reassigned = Track::new(TrackId::new(8), second, 1);
         assert_eq!(reassigned.id(), TrackId::new(8));
+    }
+
+    #[test]
+    fn suma_etapas_y_hace_visible_el_tradeoff_de_latencia() {
+        let mut budget = LatencyBudget::new(Duration::from_millis(45)).expect("límite válido");
+
+        assert!(budget.add_stage("ingesta", Duration::from_millis(5)));
+        assert!(budget.add_stage("análisis", Duration::from_millis(20)));
+        assert!(budget.add_stage("salida", Duration::from_millis(8)));
+
+        assert_eq!(budget.total(), Duration::from_millis(33));
+        assert!(budget.is_within_limit());
+        assert_eq!(budget.stages()[1].name(), "análisis");
+        assert_eq!(budget.stages()[1].duration(), Duration::from_millis(20));
+    }
+
+    #[test]
+    fn rechaza_un_limite_nulo_y_nombres_de_etapa_vacios() {
+        assert!(LatencyBudget::new(Duration::ZERO).is_none());
+        assert!(StageLatency::new("", Duration::from_millis(1)).is_none());
+
+        let mut budget = LatencyBudget::new(Duration::from_millis(1)).expect("límite válido");
+        assert!(!budget.add_stage("", Duration::ZERO));
+        assert!(budget.add_stage("ingesta", Duration::from_millis(2)));
+        assert!(!budget.is_within_limit());
     }
 }
