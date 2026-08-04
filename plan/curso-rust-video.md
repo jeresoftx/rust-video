@@ -84,9 +84,9 @@ datos y presupuesto de rendimiento de cada capítulo.
 
 ### 08. Procesamiento paralelo y zero-copy
 
-- [ ] Modelar propiedad de buffers, paralelismo y backpressure.
-- [ ] Conectar con canónicos de concurrencia y low-level.
-- [ ] Documentar por qué zero-copy no justifica `unsafe` por defecto.
+- [x] Modelar propiedad de buffers, paralelismo y backpressure.
+- [x] Conectar con canónicos de concurrencia y low-level.
+- [x] Documentar por qué zero-copy no justifica `unsafe` por defecto.
 
 ### 09. Salida y anotación del stream
 
