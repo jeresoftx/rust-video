@@ -79,7 +79,7 @@ datos y presupuesto de rendimiento de cada capítulo.
 ### 07. Rendimiento y presupuesto de latencia
 
 - [x] Expresar un presupuesto por etapa y latencia de extremo a extremo.
-- [ ] Medir el modelo local y documentar qué no representa.
+- [x] Medir el modelo local y documentar qué no representa.
 - [x] Comparar throughput, latencia y calidad de salida.
 
 ### 08. Procesamiento paralelo y zero-copy
